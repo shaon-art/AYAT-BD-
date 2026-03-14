@@ -25,22 +25,10 @@ import {
   FileText,
   AlertCircle,
   Upload,
-  Server
+  Server,
+  Tag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db } from './firebase';
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  onSnapshot,
-  setDoc,
-  getDoc,
-  increment
-} from 'firebase/firestore';
 
 // --- Types ---
 
@@ -68,6 +56,11 @@ interface Report {
   movieTitle: string;
   timestamp: any;
   reason: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 // --- Initial Data ---
@@ -133,85 +126,89 @@ const INITIAL_MOVIES: Movie[] = [
 
 export default function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [featuredMovieId, setFeaturedMovieId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [currentView, setCurrentView] = useState<'home' | 'admin' | 'player'>('home');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [initialEditMovie, setInitialEditMovie] = useState<Movie | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'info';
+    message: string;
+  }>({
+    isOpen: false,
+    type: 'info',
+    message: '',
+  });
   const [dbError, setDbError] = useState<string | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
 
-  // Check if Firebase is configured
-  const isFirebaseConfigured = useMemo(() => {
-    return !!import.meta.env.VITE_FIREBASE_API_KEY && 
-           !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
-  }, []);
-
-  // Initialize data from Firestore
+  // Initialize data from API
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      setIsLoading(false);
-      setDbError("Firebase configuration is missing. Please add your API keys in the Secrets menu.");
-      return;
-    }
+    const fetchData = async () => {
+      try {
+        const [moviesRes, featuredRes, reportsRes, categoriesRes] = await Promise.all([
+          fetch('/api/movies'),
+          fetch('/api/config/featured'),
+          fetch('/api/reports'),
+          fetch('/api/categories')
+        ]);
 
-    const moviesCol = collection(db, 'movies');
-    
-    // Listen for real-time updates
-    const unsubscribe = onSnapshot(moviesCol, (snapshot) => {
-      const moviesList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Movie[];
-      
-      if (moviesList.length === 0 && isLoading) {
-        // Seed initial data if empty (only on first load)
-        INITIAL_MOVIES.forEach(async (movie) => {
-          const { id, ...movieData } = movie;
-          try {
-            await addDoc(moviesCol, movieData);
-          } catch (e) {
-            console.error("Seeding error:", e);
+        const moviesList = await moviesRes.json();
+        const featuredData = await featuredRes.json();
+        const reportsList = await reportsRes.json();
+        const categoriesList = await categoriesRes.json();
+
+        if (moviesList.length === 0 && isLoading) {
+          // Seed initial data if empty
+          for (const movie of INITIAL_MOVIES) {
+            const { id, ...movieData } = movie;
+            await fetch('/api/movies', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(movieData)
+            });
           }
-        });
-      } else {
-        setMovies(moviesList);
+          // Re-fetch after seeding
+          const reFetchRes = await fetch('/api/movies');
+          setMovies(await reFetchRes.json());
+        } else {
+          setMovies(moviesList);
+        }
+
+        setFeaturedMovieId(featuredData.movieId);
+        setReports(reportsList);
+        setCategories(categoriesList);
+        setIsLoading(false);
+        setDbError(null);
+      } catch (error) {
+        console.error("API error:", error);
+        setDbError("Failed to connect to the server. Please ensure the backend is running.");
+        setIsLoading(false);
       }
-      setIsLoading(false);
-      setDbError(null);
-    }, (error) => {
-      console.error("Firestore error:", error);
-      setDbError("Failed to connect to the database. You might be offline or your Firebase config is incorrect.");
-      setIsLoading(false);
-    });
-
-    // Listen for featured movie ID changes
-    const featuredDoc = doc(db, 'config', 'featured');
-    const unsubscribeFeatured = onSnapshot(featuredDoc, (snap) => {
-      if (snap.exists()) {
-        setFeaturedMovieId(snap.data().movieId);
-      }
-    }, (error) => {
-      console.error("Featured doc error:", error);
-    });
-
-    // Listen for reports
-    const reportsCol = collection(db, 'reports');
-    const unsubscribeReports = onSnapshot(reportsCol, (snapshot) => {
-      const reportsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Report[];
-      setReports(reportsList);
-    });
-
-    return () => {
-      unsubscribe();
-      unsubscribeFeatured();
-      unsubscribeReports();
     };
-  }, [isFirebaseConfigured]);
+
+    fetchData();
+    
+    // Polling for "real-time" updates (optional, but good for demo)
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-logout feature (10 minutes of inactivity)
   useEffect(() => {
@@ -261,13 +258,25 @@ export default function App() {
     [movies, featuredMovieId]
   );
 
+  const categoryNames = useMemo(() => {
+    return ['All', ...categories.map(c => c.name)];
+  }, [categories]);
+
   const filteredMovies = useMemo(() => {
-    let list = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    let list = movies.filter(m => 
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.genre.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    if (selectedCategory !== 'All') {
+      list = list.filter(m => m.genre.includes(selectedCategory));
+    }
+
     if (currentView !== 'admin') {
       list = list.filter(m => m.status !== 'draft');
     }
     return list;
-  }, [movies, searchQuery, currentView]);
+  }, [movies, searchQuery, selectedCategory, currentView]);
 
   const handlePlayMovie = async (movie: Movie) => {
     setSelectedMovie(movie);
@@ -276,10 +285,7 @@ export default function App() {
     
     // Increment view count
     try {
-      const movieRef = doc(db, 'movies', movie.id);
-      await updateDoc(movieRef, {
-        views: increment(1)
-      });
+      await fetch(`/api/movies/${movie.id}/view`, { method: 'POST' });
     } catch (error) {
       console.error("Error incrementing views:", error);
     }
@@ -295,7 +301,13 @@ export default function App() {
 
   const handleAddMovie = async (newMovie: Omit<Movie, 'id'>) => {
     try {
-      await addDoc(collection(db, 'movies'), newMovie);
+      const res = await fetch('/api/movies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMovie)
+      });
+      const data = await res.json();
+      setMovies(prev => [...prev, data]);
     } catch (error) {
       console.error("Error adding movie: ", error);
     }
@@ -303,9 +315,12 @@ export default function App() {
 
   const handleUpdateMovie = async (updatedMovie: Movie) => {
     try {
-      const { id, ...movieData } = updatedMovie;
-      const movieRef = doc(db, 'movies', id);
-      await updateDoc(movieRef, movieData);
+      setMovies(prev => prev.map(m => m.id === updatedMovie.id ? updatedMovie : m));
+      await fetch(`/api/movies/${updatedMovie.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedMovie)
+      });
     } catch (error) {
       console.error("Error updating movie: ", error);
     }
@@ -313,10 +328,15 @@ export default function App() {
 
   const handleDeleteMovie = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'movies', id));
+      setMovies(prev => prev.filter(m => m.id !== id));
+      await fetch(`/api/movies/${id}`, { method: 'DELETE' });
       if (featuredMovieId === id) {
         setFeaturedMovieId('');
-        await setDoc(doc(db, 'config', 'featured'), { movieId: '' });
+        await fetch('/api/config/featured', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ movieId: '' })
+        });
       }
     } catch (error) {
       console.error("Error deleting movie: ", error);
@@ -326,7 +346,11 @@ export default function App() {
   const handleSetFeatured = async (id: string) => {
     try {
       setFeaturedMovieId(id);
-      await setDoc(doc(db, 'config', 'featured'), { movieId: id });
+      await fetch('/api/config/featured', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ movieId: id })
+      });
     } catch (error) {
       console.error("Error setting featured: ", error);
     }
@@ -334,11 +358,14 @@ export default function App() {
 
   const handleReportBrokenLink = async (movie: Movie, reason: string) => {
     try {
-      await addDoc(collection(db, 'reports'), {
-        movieId: movie.id,
-        movieTitle: movie.title,
-        timestamp: new Date(),
-        reason: reason
+      await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          movieId: movie.id,
+          movieTitle: movie.title,
+          reason: reason
+        })
       });
       return true;
     } catch (error) {
@@ -349,14 +376,12 @@ export default function App() {
 
   const handleBulkUpload = async (moviesData: any[]) => {
     try {
-      const moviesCol = collection(db, 'movies');
       for (const movie of moviesData) {
-        const movieToSave = {
-          ...movie,
-          status: movie.status || 'published',
-          servers: movie.servers || (movie.videoUrl ? [{ name: 'Server 1', url: movie.videoUrl }] : [])
-        };
-        await addDoc(moviesCol, movieToSave);
+        await fetch('/api/movies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(movie)
+        });
       }
       return true;
     } catch (error) {
@@ -367,9 +392,50 @@ export default function App() {
 
   const handleDeleteReport = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'reports', id));
+      await fetch(`/api/reports/${id}`, { method: 'DELETE' });
     } catch (error) {
       console.error("Error deleting report: ", error);
+    }
+  };
+
+  const handleAddCategory = async (name: string) => {
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCategories(prev => [...prev, data]);
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error('Failed to add category:', error);
+    }
+  };
+
+  const handleUpdateCategory = async (id: string, name: string) => {
+    try {
+      const res = await fetch(`/api/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const data = await res.json();
+      setCategories(prev => prev.map(c => c.id === id ? data : c));
+    } catch (error) {
+      console.error('Failed to update category:', error);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Failed to delete category:', error);
     }
   };
 
@@ -429,6 +495,13 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setCurrentView('admin')}
+            className="hidden md:flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95"
+          >
+            <LayoutDashboard size={16} className="text-blue-500" />
+            Admin Panel
+          </button>
           <button className="hidden md:block bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-full font-semibold transition-all active:scale-95">
             Sign In
           </button>
@@ -487,15 +560,13 @@ export default function App() {
               <h2 className="text-2xl font-bold text-white">Connection Error</h2>
               <p className="text-gray-400">{dbError}</p>
             </div>
-            {!isFirebaseConfigured && (
+            {dbError && (
               <div className="bg-white/5 border border-white/10 p-6 rounded-2xl text-left space-y-4 max-w-lg">
-                <h3 className="font-bold text-blue-400">How to fix this:</h3>
-                <ol className="list-decimal list-inside text-sm text-gray-400 space-y-2">
-                  <li>Open the <b>Settings</b> menu in AI Studio</li>
-                  <li>Go to <b>Secrets</b></li>
-                  <li>Add your Firebase keys (API_KEY, PROJECT_ID, etc.)</li>
-                  <li>The app will automatically reconnect</li>
-                </ol>
+                <h3 className="font-bold text-blue-400">Troubleshooting:</h3>
+                <p className="text-sm text-gray-400">
+                  The application is now using a local SQLite database because Firebase setup was declined. 
+                  If you see this error, ensure the development server is running correctly.
+                </p>
               </div>
             )}
             <button 
@@ -517,6 +588,9 @@ export default function App() {
                 featuredMovie={featuredMovie} 
                 movies={filteredMovies} 
                 onPlay={handlePlayMovie} 
+                categories={categoryNames}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
               />
             )}
             {currentView === 'player' && selectedMovie && (
@@ -526,6 +600,28 @@ export default function App() {
                 relatedMovies={movies.filter(m => m.id !== selectedMovie.id && m.status !== 'draft').slice(0, 6)}
                 onPlayRelated={handlePlayMovie}
                 onReport={handleReportBrokenLink}
+                isAdmin={isAdminLoggedIn}
+                onEdit={() => {
+                  setInitialEditMovie(selectedMovie);
+                  setCurrentView('admin');
+                }}
+                onDelete={() => {
+                  setConfirmModal({
+                    isOpen: true,
+                    title: 'Delete Movie',
+                    message: 'Are you sure you want to delete this movie? This action cannot be undone.',
+                    onConfirm: () => {
+                      handleDeleteMovie(selectedMovie.id);
+                      setCurrentView('home');
+                    }
+                  });
+                }}
+                onDownload={() => {
+                  const url = selectedMovie.servers?.[0]?.url || selectedMovie.videoUrl;
+                  if (url) {
+                    window.open(url, '_blank');
+                  }
+                }}
               />
             )}
             {currentView === 'admin' && (
@@ -542,6 +638,24 @@ export default function App() {
                 reports={reports}
                 onDeleteReport={handleDeleteReport}
                 onBulkUpload={handleBulkUpload}
+                categories={categories}
+                onAddCategory={handleAddCategory}
+                onUpdateCategory={handleUpdateCategory}
+                onDeleteCategory={handleDeleteCategory}
+                initialEditMovie={initialEditMovie}
+                onClearInitialEdit={() => setInitialEditMovie(null)}
+                onPlayMovie={handlePlayMovie}
+                onConfirm={(title, message, action) => {
+                  setConfirmModal({
+                    isOpen: true,
+                    title,
+                    message,
+                    onConfirm: action
+                  });
+                }}
+                onNotify={(type, message) => {
+                  setNotification({ isOpen: true, type, message });
+                }}
               />
             )}
           </>
@@ -571,7 +685,12 @@ export default function App() {
             <ul className="space-y-2 text-gray-500 text-sm">
               <li className="hover:text-blue-500 cursor-pointer transition-colors">Help Center</li>
               <li className="hover:text-blue-500 cursor-pointer transition-colors">Terms of Service</li>
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">Privacy Policy</li>
+              <li 
+                onClick={() => setCurrentView('admin')}
+                className="hover:text-blue-500 cursor-pointer transition-colors flex items-center gap-1"
+              >
+                <Lock size={12} /> Admin Login
+              </li>
               <li className="hover:text-blue-500 cursor-pointer transition-colors">Contact Us</li>
             </ul>
           </div>
@@ -593,16 +712,27 @@ export default function App() {
           © 2026 AYAT BD™. All rights reserved. Inspired by flixbd.org
         </div>
       </footer>
+      <ConfirmModal 
+        {...confirmModal} 
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} 
+      />
+      <Notification 
+        {...notification} 
+        onClose={() => setNotification(prev => ({ ...prev, isOpen: false }))} 
+      />
     </div>
   );
 }
 
 // --- Sub-Views ---
 
-function HomeView({ featuredMovie, movies, onPlay }: { 
+function HomeView({ featuredMovie, movies, onPlay, categories, selectedCategory, onSelectCategory }: { 
   featuredMovie: Movie, 
   movies: Movie[], 
-  onPlay: (m: Movie) => void 
+  onPlay: (m: Movie) => void,
+  categories: string[],
+  selectedCategory: string,
+  onSelectCategory: (c: string) => void
 }) {
   const top10 = useMemo(() => {
     return [...movies]
@@ -685,6 +815,23 @@ function HomeView({ featuredMovie, movies, onPlay }: {
           </div>
         </section>
       )}
+
+      {/* Categories Section */}
+      <section className="px-4 md:px-8 overflow-x-auto flex gap-3 pb-2 custom-scrollbar">
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => onSelectCategory(cat)}
+            className={`px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+              selectedCategory === cat 
+              ? 'bg-blue-600 border-blue-500 text-white' 
+              : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </section>
 
       {/* Top 10 Today Section */}
       {top10.length > 0 && (
@@ -802,12 +949,16 @@ function MovieCard({ movie, onClick }: { movie: Movie, onClick: () => void, key?
   );
 }
 
-function PlayerView({ movie, onBack, relatedMovies, onPlayRelated, onReport }: { 
+function PlayerView({ movie, onBack, relatedMovies, onPlayRelated, onReport, isAdmin, onEdit, onDelete, onDownload }: { 
   movie: Movie, 
   onBack: () => void,
   relatedMovies: Movie[],
   onPlayRelated: (m: Movie) => void,
-  onReport: (m: Movie, r: string) => Promise<boolean>
+  onReport: (m: Movie, r: string) => Promise<boolean>,
+  isAdmin?: boolean,
+  onEdit?: () => void,
+  onDelete?: () => void,
+  onDownload?: () => void
 }) {
   const [isReporting, setIsReporting] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -857,13 +1008,33 @@ function PlayerView({ movie, onBack, relatedMovies, onPlayRelated, onReport }: {
           Back to Home
         </button>
 
-        <button 
-          onClick={() => setIsReporting(true)}
-          className="text-xs font-bold text-red-500/60 hover:text-red-500 transition-colors flex items-center gap-1"
-        >
-          <X size={14} />
-          Report Broken Link
-        </button>
+        <div className="flex items-center gap-4">
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={onEdit}
+                className="bg-blue-600/20 text-blue-500 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+              >
+                <Edit2 size={14} />
+                Edit Movie
+              </button>
+              <button 
+                onClick={onDelete}
+                className="bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+            </div>
+          )}
+          <button 
+            onClick={() => setIsReporting(true)}
+            className="text-xs font-bold text-red-500/60 hover:text-red-500 transition-colors flex items-center gap-1"
+          >
+            <X size={14} />
+            Report Broken Link
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -970,7 +1141,10 @@ function PlayerView({ movie, onBack, relatedMovies, onPlayRelated, onReport }: {
             {movie.description}
           </p>
           <div className="flex gap-4">
-            <button className="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl font-bold hover:bg-white/10 transition-all">
+            <button 
+              onClick={onDownload}
+              className="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl font-bold hover:bg-white/10 transition-all"
+            >
               Download
             </button>
             <button className="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl font-bold hover:bg-white/10 transition-all">
@@ -1016,7 +1190,16 @@ function AdminView({
   onSetFeatured,
   reports,
   onDeleteReport,
-  onBulkUpload
+  onBulkUpload,
+  categories,
+  onAddCategory,
+  onUpdateCategory,
+  onDeleteCategory,
+  initialEditMovie,
+  onClearInitialEdit,
+  onPlayMovie,
+  onConfirm,
+  onNotify
 }: { 
   isLoggedIn: boolean, 
   onLogin: (p: string) => boolean,
@@ -1029,15 +1212,45 @@ function AdminView({
   onSetFeatured: (id: string) => void,
   reports: Report[],
   onDeleteReport: (id: string) => void,
-  onBulkUpload: (data: any[]) => Promise<boolean>
+  onBulkUpload: (data: any[]) => Promise<boolean>,
+  categories: Category[],
+  onAddCategory: (name: string) => void,
+  onUpdateCategory: (id: string, name: string) => void,
+  onDeleteCategory: (id: string) => void,
+  initialEditMovie?: Movie | null,
+  onClearInitialEdit?: () => void,
+  onPlayMovie: (m: Movie) => void,
+  onConfirm: (title: string, message: string, action: () => void) => void,
+  onNotify: (type: 'success' | 'error' | 'info', message: string) => void
 }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
-  const [activeTab, setActiveTab] = useState<'movies' | 'bulk' | 'reports'>('movies');
+  const [activeTab, setActiveTab] = useState<'movies' | 'categories' | 'bulk' | 'reports'>('movies');
   const [bulkData, setBulkData] = useState('');
   const [bulkStatus, setBulkStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [movieSearch, setMovieSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+
+  useEffect(() => {
+    if (initialEditMovie) {
+      setEditingMovie(initialEditMovie);
+      setIsModalOpen(true);
+      if (onClearInitialEdit) onClearInitialEdit();
+    }
+  }, [initialEditMovie]);
+
+  const filteredMovies = useMemo(() => {
+    return movies.filter(m => {
+      const matchesSearch = m.title.toLowerCase().includes(movieSearch.toLowerCase()) ||
+                           m.genre.toLowerCase().includes(movieSearch.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [movies, movieSearch, statusFilter]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1063,7 +1276,7 @@ function AdminView({
       }
     } catch (e) {
       setBulkStatus('error');
-      alert('Invalid JSON format. Please check your data.');
+      onNotify('error', 'Invalid JSON format. Please check your data.');
     }
   };
 
@@ -1137,6 +1350,12 @@ function AdminView({
           Movies
         </button>
         <button 
+          onClick={() => setActiveTab('categories')}
+          className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'categories' ? 'border-blue-600 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+        >
+          Categories
+        </button>
+        <button 
           onClick={() => setActiveTab('bulk')}
           className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'bulk' ? 'border-blue-600 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
         >
@@ -1156,20 +1375,49 @@ function AdminView({
       </div>
 
       {activeTab === 'movies' && (
-        <div className="bg-[#121214] border border-white/5 rounded-3xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/5 bg-white/5">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Movie</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Genre</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Featured</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {movies.map(movie => (
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+              <input 
+                type="text"
+                placeholder="Search movies to edit or delete..."
+                className="w-full bg-[#121214] border border-white/5 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-blue-500/50 transition-all"
+                value={movieSearch}
+                onChange={(e) => setMovieSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-[#121214] p-1 rounded-xl border border-white/5">
+              {(['all', 'published', 'draft'] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                    statusFilter === s 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                    : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bg-[#121214] border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/5">
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Movie</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Genre</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Featured</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredMovies.map(movie => (
                   <tr key={movie.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
@@ -1197,9 +1445,107 @@ function AdminView({
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button 
+                          onClick={() => onPlayMovie(movie)}
+                          className="p-2 hover:bg-green-500/20 hover:text-green-500 rounded-lg transition-colors text-gray-500"
+                          title="View Movie"
+                        >
+                          <Play size={18} />
+                        </button>
+                        <button 
                           onClick={() => {
                             setEditingMovie(movie);
                             setIsModalOpen(true);
+                          }}
+                          className="p-2 hover:bg-blue-500/20 hover:text-blue-500 rounded-lg transition-colors text-gray-500"
+                          title="Edit Movie"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            onConfirm(
+                              'Delete Movie',
+                              'Are you sure you want to delete this movie? This action cannot be undone.',
+                              () => onDelete(movie.id)
+                            );
+                          }}
+                          className="p-2 hover:bg-red-500/20 hover:text-red-500 rounded-lg transition-colors text-gray-500"
+                          title="Delete Movie"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )}
+
+      {activeTab === 'categories' && (
+        <div className="space-y-6">
+          <div className="bg-[#121214] border border-white/5 rounded-3xl p-8 shadow-xl">
+            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <Tag className="text-blue-500" size={24} />
+              {editingCategory ? 'Edit Category' : 'Add New Category'}
+            </h3>
+            <div className="flex gap-4">
+              <input 
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500"
+                placeholder="Category Name (e.g. Action, Drama)"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+              <button 
+                onClick={() => {
+                  if (!newCategoryName.trim()) return;
+                  if (editingCategory) {
+                    onUpdateCategory(editingCategory.id, newCategoryName);
+                    setEditingCategory(null);
+                  } else {
+                    onAddCategory(newCategoryName);
+                  }
+                  setNewCategoryName('');
+                }}
+                className="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold transition-all"
+              >
+                {editingCategory ? 'Update' : 'Add'}
+              </button>
+              {editingCategory && (
+                <button 
+                  onClick={() => {
+                    setEditingCategory(null);
+                    setNewCategoryName('');
+                  }}
+                  className="bg-white/5 hover:bg-white/10 px-6 py-3 rounded-xl font-bold transition-all"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-[#121214] border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/5">
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Category Name</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {categories.map(cat => (
+                  <tr key={cat.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="px-6 py-4 font-bold">{cat.name}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => {
+                            setEditingCategory(cat);
+                            setNewCategoryName(cat.name);
                           }}
                           className="p-2 hover:bg-blue-500/20 hover:text-blue-500 rounded-lg transition-colors text-gray-500"
                         >
@@ -1207,9 +1553,11 @@ function AdminView({
                         </button>
                         <button 
                           onClick={() => {
-                            if (confirm('Are you sure you want to delete this movie?')) {
-                              onDelete(movie.id);
-                            }
+                            onConfirm(
+                              'Delete Category',
+                              `Are you sure you want to delete "${cat.name}"? This will not delete the movies in this category.`,
+                              () => onDeleteCategory(cat.id)
+                            );
                           }}
                           className="p-2 hover:bg-red-500/20 hover:text-red-500 rounded-lg transition-colors text-gray-500"
                         >
@@ -1315,6 +1663,7 @@ function AdminView({
         {isModalOpen && (
           <MovieModal 
             movie={editingMovie} 
+            categories={categories}
             onClose={() => setIsModalOpen(false)} 
             onSave={(data) => {
               if (editingMovie) {
@@ -1324,6 +1673,7 @@ function AdminView({
               }
               setIsModalOpen(false);
             }}
+            onNotify={onNotify}
           />
         )}
       </AnimatePresence>
@@ -1331,10 +1681,12 @@ function AdminView({
   );
 }
 
-function MovieModal({ movie, onClose, onSave }: { 
+function MovieModal({ movie, categories, onClose, onSave, onNotify }: { 
   movie: Movie | null, 
+  categories: Category[],
   onClose: () => void, 
-  onSave: (data: Omit<Movie, 'id'>) => void 
+  onSave: (data: Omit<Movie, 'id'>) => void,
+  onNotify: (type: 'success' | 'error' | 'info', message: string) => void
 }) {
   const [formData, setFormData] = useState({
     title: movie?.title || '',
@@ -1344,6 +1696,7 @@ function MovieModal({ movie, onClose, onSave }: {
     year: movie?.year || '',
     description: movie?.description || '',
     status: movie?.status || 'published',
+    views: movie?.views || 0,
     servers: movie?.servers || [{ name: 'Server 1', url: movie?.videoUrl || '' }]
   });
 
@@ -1385,7 +1738,7 @@ function MovieModal({ movie, onClose, onSave }: {
 
     const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
     if (!apiKey) {
-      alert('ImgBB API Key is missing. Please add VITE_IMGBB_API_KEY to your secrets.');
+      onNotify('error', 'ImgBB API Key is missing. Please add VITE_IMGBB_API_KEY to your secrets.');
       return;
     }
 
@@ -1406,7 +1759,7 @@ function MovieModal({ movie, onClose, onSave }: {
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      onNotify('error', 'Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -1447,12 +1800,32 @@ function MovieModal({ movie, onClose, onSave }: {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Genre</label>
-              <input 
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500"
-                value={formData.genre}
-                onChange={e => setFormData({...formData, genre: e.target.value})}
-              />
+              <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Genre / Category</label>
+              <div className="flex gap-2">
+                <input 
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500"
+                  value={formData.genre}
+                  onChange={e => setFormData({...formData, genre: e.target.value})}
+                  placeholder="Select or type..."
+                />
+                <select 
+                  className="bg-white/5 border border-white/10 rounded-xl px-2 focus:outline-none focus:border-blue-500 text-xs"
+                  onChange={e => {
+                    if (e.target.value) {
+                      const current = formData.genre ? formData.genre.split(',').map(g => g.trim()) : [];
+                      if (!current.includes(e.target.value)) {
+                        setFormData({...formData, genre: [...current, e.target.value].join(', ')});
+                      }
+                    }
+                  }}
+                  value=""
+                >
+                  <option value="" disabled>Quick Select</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.name} className="bg-[#121214]">{c.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1474,6 +1847,15 @@ function MovieModal({ movie, onClose, onSave }: {
                   <option value="draft" className="bg-[#121214]">Draft</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Views</label>
+              <input 
+                type="number"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500"
+                value={formData.views}
+                onChange={e => setFormData({...formData, views: parseInt(e.target.value) || 0})}
+              />
             </div>
           </div>
           <div className="space-y-4">
@@ -1570,6 +1952,94 @@ function MovieModal({ movie, onClose, onSave }: {
             className="flex-1 bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20"
           >
             {movie ? 'Save Changes' : 'Add Movie'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function Notification({ isOpen, type, message, onClose }: {
+  isOpen: boolean;
+  type: 'success' | 'error' | 'info';
+  message: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(onClose, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const colors = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    info: 'bg-blue-600',
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 50 }}
+      className={`fixed bottom-8 right-8 z-[300] ${colors[type]} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[300px]`}
+    >
+      {type === 'error' ? <AlertCircle size={20} /> : <Loader2 size={20} className={type === 'info' ? 'animate-spin' : ''} />}
+      <p className="font-bold">{message}</p>
+      <button onClick={onClose} className="ml-auto p-1 hover:bg-white/10 rounded-full transition-all">
+        <X size={16} />
+      </button>
+    </motion.div>
+  );
+}
+
+function ConfirmModal({ isOpen, title, message, onConfirm, onClose }: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+      />
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="bg-[#121214] border border-white/10 rounded-3xl w-full max-w-md p-8 relative z-10 shadow-2xl text-center"
+      >
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <AlertCircle className="text-red-500" size={32} />
+        </div>
+        <h3 className="text-2xl font-black mb-2">{title}</h3>
+        <p className="text-gray-400 mb-8">{message}</p>
+        <div className="flex gap-4">
+          <button 
+            onClick={onClose}
+            className="flex-1 bg-white/5 hover:bg-white/10 py-3 rounded-xl font-bold transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-xl font-bold transition-all"
+          >
+            Confirm
           </button>
         </div>
       </motion.div>
