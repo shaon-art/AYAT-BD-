@@ -157,6 +157,16 @@ export default function App() {
   });
   const [dbError, setDbError] = useState<string | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
+  const [sortBy, setSortBy] = useState<'none' | 'newest' | 'popular'>('none');
+  const [supportModal, setSupportModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    content: string;
+  }>({
+    isOpen: false,
+    title: '',
+    content: '',
+  });
 
   // Initialize data from API
   useEffect(() => {
@@ -275,8 +285,15 @@ export default function App() {
     if (currentView !== 'admin') {
       list = list.filter(m => m.status !== 'draft');
     }
+
+    if (sortBy === 'newest') {
+      list = [...list].sort((a, b) => parseInt(b.year) - parseInt(a.year));
+    } else if (sortBy === 'popular') {
+      list = [...list].sort((a, b) => (b.views || 0) - (a.views || 0));
+    }
+
     return list;
-  }, [movies, searchQuery, selectedCategory, currentView]);
+  }, [movies, searchQuery, selectedCategory, currentView, sortBy]);
 
   const handlePlayMovie = async (movie: Movie) => {
     setSelectedMovie(movie);
@@ -451,7 +468,7 @@ export default function App() {
             <Film className="text-white" size={24} />
           </div>
           <h1 className="text-xl md:text-2xl font-black tracking-tighter">
-            AYAT <span className="text-blue-500">BD™</span>
+            Footfy <span className="text-blue-500">Live</span>
           </h1>
         </div>
 
@@ -579,7 +596,7 @@ export default function App() {
         ) : isLoading ? (
           <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
             <Loader2 className="animate-spin text-blue-500" size={48} />
-            <p className="text-gray-500 font-medium">Loading AYAT BD™ Library...</p>
+            <p className="text-gray-500 font-medium">Loading Footfy Live Library...</p>
           </div>
         ) : (
           <>
@@ -666,7 +683,7 @@ export default function App() {
       <footer className="border-t border-white/5 mt-20 py-12 px-4 md:px-8 bg-black/40">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h2 className="text-xl font-bold italic">AYAT BD™</h2>
+            <h2 className="text-xl font-bold italic">Footfy Live</h2>
             <p className="text-gray-500 text-sm leading-relaxed">
               Premium movie streaming experience. Watch the latest blockbusters and series in high definition.
             </p>
@@ -674,24 +691,71 @@ export default function App() {
           <div>
             <h3 className="font-semibold mb-4 text-gray-300">Browse</h3>
             <ul className="space-y-2 text-gray-500 text-sm">
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">Movies</li>
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">TV Series</li>
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">New Releases</li>
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">Popular</li>
+              <li 
+                onClick={() => { setCurrentView('home'); setSelectedCategory('All'); setSortBy('none'); window.scrollTo(0, 0); }}
+                className="hover:text-blue-500 cursor-pointer transition-colors"
+              >
+                Movies
+              </li>
+              <li 
+                onClick={() => { setCurrentView('home'); setSelectedCategory('TV Series'); setSortBy('none'); window.scrollTo(0, 0); }}
+                className="hover:text-blue-500 cursor-pointer transition-colors"
+              >
+                TV Series
+              </li>
+              <li 
+                onClick={() => { setCurrentView('home'); setSortBy('newest'); window.scrollTo(0, 0); }}
+                className="hover:text-blue-500 cursor-pointer transition-colors"
+              >
+                New Releases
+              </li>
+              <li 
+                onClick={() => { setCurrentView('home'); setSortBy('popular'); window.scrollTo(0, 0); }}
+                className="hover:text-blue-500 cursor-pointer transition-colors"
+              >
+                Popular
+              </li>
             </ul>
           </div>
           <div>
             <h3 className="font-semibold mb-4 text-gray-300">Support</h3>
             <ul className="space-y-2 text-gray-500 text-sm">
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">Help Center</li>
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">Terms of Service</li>
+              <li 
+                onClick={() => setSupportModal({
+                  isOpen: true,
+                  title: 'Help Center',
+                  content: 'Welcome to our Help Center. Here you can find answers to common questions about streaming, account management, and technical issues.\n\nFor immediate assistance, please use the Contact Us option.'
+                })}
+                className="hover:text-blue-500 cursor-pointer transition-colors"
+              >
+                Help Center
+              </li>
+              <li 
+                onClick={() => setSupportModal({
+                  isOpen: true,
+                  title: 'Terms of Service',
+                  content: 'By using our service, you agree to the following terms:\n\n1. You must be at least 13 years old.\n2. Content is for personal use only.\n3. Respect copyright and intellectual property.\n4. We reserve the right to modify the service at any time.'
+                })}
+                className="hover:text-blue-500 cursor-pointer transition-colors"
+              >
+                Terms of Service
+              </li>
               <li 
                 onClick={() => setCurrentView('admin')}
                 className="hover:text-blue-500 cursor-pointer transition-colors flex items-center gap-1"
               >
                 <Lock size={12} /> Admin Login
               </li>
-              <li className="hover:text-blue-500 cursor-pointer transition-colors">Contact Us</li>
+              <li 
+                onClick={() => setSupportModal({
+                  isOpen: true,
+                  title: 'Contact Us',
+                  content: 'Have questions or feedback? We\'d love to hear from you!\n\nEmail: support@footfylive.com\nOwner: Tamim Hasan Shaon\n\nWe typically respond within 24-48 hours.'
+                })}
+                className="hover:text-blue-500 cursor-pointer transition-colors"
+              >
+                Contact Us
+              </li>
             </ul>
           </div>
           <div>
@@ -715,6 +779,10 @@ export default function App() {
       <ConfirmModal 
         {...confirmModal} 
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} 
+      />
+      <SupportModal 
+        {...supportModal}
+        onClose={() => setSupportModal(prev => ({ ...prev, isOpen: false }))}
       />
       <Notification 
         {...notification} 
@@ -1292,7 +1360,7 @@ function AdminView({
             <Lock className="text-blue-500" size={32} />
           </div>
           <h2 className="text-2xl font-bold text-center mb-2">Admin Access</h2>
-          <p className="text-gray-500 text-center text-sm mb-8">Enter password to manage AYAT BD™</p>
+          <p className="text-gray-500 text-center text-sm mb-8">Enter password to manage Footfy Live</p>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <input 
@@ -1993,6 +2061,51 @@ function Notification({ isOpen, type, message, onClose }: {
         <X size={16} />
       </button>
     </motion.div>
+  );
+}
+
+function SupportModal({ isOpen, title, content, onClose }: {
+  isOpen: boolean;
+  title: string;
+  content: string;
+  onClose: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative bg-zinc-900 border border-white/10 p-8 rounded-3xl max-w-lg w-full shadow-2xl space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-black">{title}</h3>
+              <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="text-gray-400 leading-relaxed whitespace-pre-wrap">
+              {content}
+            </div>
+            <button 
+              onClick={onClose}
+              className="w-full bg-white text-black py-4 rounded-2xl font-black hover:bg-gray-200 transition-all"
+            >
+              Got it
+            </button>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
 
