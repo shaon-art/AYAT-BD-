@@ -59,19 +59,23 @@ try {
   // Column probably already exists
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
+async function setupApp() {
   app.use(express.json());
 
   // API Routes
   app.get("/api/movies", (req, res) => {
-    const movies = db.prepare("SELECT * FROM movies").all();
-    res.json(movies.map(m => ({
-      ...m,
-      servers: m.servers ? JSON.parse(m.servers) : (m.videoUrl ? [{ name: 'Server 1', url: m.videoUrl }] : [])
-    })));
+    try {
+      const movies = db.prepare("SELECT * FROM movies").all();
+      res.json(movies.map(m => ({
+        ...m,
+        servers: m.servers ? JSON.parse(m.servers) : (m.videoUrl ? [{ name: 'Server 1', url: m.videoUrl }] : [])
+      })));
+    } catch (e) {
+      res.status(500).json({ error: "Database error" });
+    }
   });
 
   app.post("/api/movies", (req, res) => {
@@ -184,4 +188,6 @@ async function startServer() {
   });
 }
 
-startServer();
+setupApp();
+
+export default app;

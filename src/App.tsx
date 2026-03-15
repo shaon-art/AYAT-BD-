@@ -709,7 +709,7 @@ export default function App() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-white/5 text-center text-gray-600 text-xs">
-          © 2026 AYAT BD™. All rights reserved. Inspired by flixbd.org
+          © 2026 Tamim Hasan Shaon. All rights reserved. Inspired By Footfy Live
         </div>
       </footer>
       <ConfirmModal 
