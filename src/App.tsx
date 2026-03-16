@@ -26,7 +26,8 @@ import {
   AlertCircle,
   Upload,
   Server,
-  Tag
+  Tag,
+  Tv
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -63,62 +64,473 @@ interface Category {
   name: string;
 }
 
+interface Channel {
+  id: string;
+  name: string;
+  logoUrl: string;
+  streamUrl: string;
+  category: string;
+}
+
 // --- Initial Data ---
 
 const INITIAL_MOVIES: Movie[] = [
+  // --- Bangla Movies (10) ---
   {
-    id: '1',
-    title: 'Inception',
+    id: 'b1',
+    title: 'Hawa',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2022',
+    description: 'A mystery drama set in the deep sea where a group of fishermen find a mysterious girl in their net.'
+  },
+  {
+    id: 'b2',
+    title: 'Priyotoma',
     posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
     videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
-    genre: 'Sci-Fi',
-    year: '2010',
-    description: 'A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.'
-  },
-  {
-    id: '2',
-    title: 'Interstellar',
-    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/zSWdZVtXT7E',
-    genre: 'Adventure',
-    year: '2014',
-    description: 'A team of explorers travel through a wormhole in space in an attempt to ensure humanity\'s survival.'
-  },
-  {
-    id: '3',
-    title: 'The Dark Knight',
-    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/EXeTwQWaywY',
-    genre: 'Action',
-    year: '2008',
-    description: 'When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.'
-  },
-  {
-    id: '4',
-    title: 'Dune: Part Two',
-    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/Way9Dexny3w',
-    genre: 'Sci-Fi',
-    year: '2024',
-    description: 'Paul Atreides unites with Chani and the Fremen while on a warpath of revenge against the conspirators who destroyed his family.'
-  },
-  {
-    id: '5',
-    title: 'Oppenheimer',
-    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/uYPbbksJxIg',
-    genre: 'Biography',
+    genre: 'Bangla Movie',
     year: '2023',
-    description: 'The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.'
+    description: 'An action-packed romantic drama starring Shakib Khan.'
   },
   {
-    id: '6',
-    title: 'The Matrix',
+    id: 'b3',
+    title: 'Poran',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2022',
+    description: 'A heart-wrenching love story based on true events.'
+  },
+  {
+    id: 'b4',
+    title: 'Surongo',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2023',
+    description: 'A thrilling heist movie about a man who digs a tunnel to a bank vault.'
+  },
+  {
+    id: 'b5',
+    title: 'Aynabaji',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2016',
+    description: 'A man who makes a living by serving jail time for others gets caught in a dangerous game.'
+  },
+  {
+    id: 'b6',
+    title: 'Monpura',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2009',
+    description: 'A classic romantic tragedy set in a remote island.'
+  },
+  {
+    id: 'b7',
+    title: 'Dhaka Attack',
     posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/vKQi3bBA1y8',
-    genre: 'Sci-Fi',
-    year: '1999',
-    description: 'A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers.'
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2017',
+    description: 'A high-octane police action thriller.'
+  },
+  {
+    id: 'b8',
+    title: 'Debi',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2018',
+    description: 'A mystery film based on Humayun Ahmed\'s famous character Misir Ali.'
+  },
+  {
+    id: 'b9',
+    title: 'Rehana Maryam Noor',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2021',
+    description: 'A powerful drama about a female doctor fighting for justice.'
+  },
+  {
+    id: 'b10',
+    title: 'Guerrilla',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Movie',
+    year: '2011',
+    description: 'A film set during the 1971 Liberation War of Bangladesh.'
+  },
+
+  // --- Tamil Bangla Dubbed (10) ---
+  {
+    id: 't1',
+    title: 'Pushpa: The Rise (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2021',
+    description: 'A laborer rises through the ranks of a red sandalwood smuggling syndicate.'
+  },
+  {
+    id: 't2',
+    title: 'K.G.F: Chapter 1 (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2018',
+    description: 'Rocky, a high-ranking assassin, goes undercover as a slave laborer in the Kolar Gold Fields.'
+  },
+  {
+    id: 't3',
+    title: 'K.G.F: Chapter 2 (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2022',
+    description: 'The blood-soaked land of Kolar Gold Fields has a new overlord now - Rocky.'
+  },
+  {
+    id: 't4',
+    title: 'Vikram (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2022',
+    description: 'A high-octane action thriller starring Kamal Haasan.'
+  },
+  {
+    id: 't5',
+    title: 'Leo (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2023',
+    description: 'An action thriller starring Thalapathy Vijay.'
+  },
+  {
+    id: 't6',
+    title: 'Jailer (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2023',
+    description: 'A retired jailer goes on a mission to save his son.'
+  },
+  {
+    id: 't7',
+    title: 'Ponniyin Selvan: I (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2022',
+    description: 'An epic historical drama based on the Chola dynasty.'
+  },
+  {
+    id: 't8',
+    title: 'Master (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2021',
+    description: 'An alcoholic professor is sent to a juvenile school.'
+  },
+  {
+    id: 't9',
+    title: 'Beast (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2022',
+    description: 'A former RAW agent takes on terrorists in a mall.'
+  },
+  {
+    id: 't10',
+    title: 'Varisu (Bangla)',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Tamil Dubbed',
+    year: '2023',
+    description: 'A family drama about a son who returns to save his father\'s business.'
+  },
+
+  // --- Hindi Movies (10) ---
+  {
+    id: 'h1',
+    title: 'Pathaan',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2023',
+    description: 'An exiled RAW agent comes back to save India from a terrorist group.'
+  },
+  {
+    id: 'h2',
+    title: 'Jawan',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2023',
+    description: 'A man is driven by a personal vendetta to rectify the wrongs in society.'
+  },
+  {
+    id: 'h3',
+    title: 'Animal',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2023',
+    description: 'A father-son relationship set against the backdrop of a violent underworld.'
+  },
+  {
+    id: 'h4',
+    title: 'Dangal',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2016',
+    description: 'A former wrestler trains his daughters to become world-class wrestlers.'
+  },
+  {
+    id: 'h5',
+    title: 'Baahubali 2: The Conclusion',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2017',
+    description: 'The conclusion to the epic saga of Baahubali.'
+  },
+  {
+    id: 'h6',
+    title: 'RRR',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2022',
+    description: 'A fictional story about two legendary revolutionaries.'
+  },
+  {
+    id: 'h7',
+    title: '3 Idiots',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2009',
+    description: 'Two friends search for their long-lost companion.'
+  },
+  {
+    id: 'h8',
+    title: 'PK',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2014',
+    description: 'An alien on Earth asks questions that no one has asked before.'
+  },
+  {
+    id: 'h9',
+    title: 'Bajrangi Bhaijaan',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '2015',
+    description: 'A man with a magnanimous heart takes a young mute Pakistani girl back to her homeland.'
+  },
+  {
+    id: 'h10',
+    title: 'Sholay',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Hindi Movie',
+    year: '1975',
+    description: 'A classic action-adventure film about two criminals hired to capture a ruthless bandit.'
+  },
+
+  // --- Bangladeshi Natok (20) ---
+  {
+    id: 'n1',
+    title: 'Bachelor Point (S4)',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2022',
+    description: 'The popular comedy series about bachelors living in Dhaka.'
+  },
+  {
+    id: 'n2',
+    title: 'Female',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2023',
+    description: 'A hilarious comedy drama.'
+  },
+  {
+    id: 'n3',
+    title: 'Punormilone',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2023',
+    description: 'A touching family drama.'
+  },
+  {
+    id: 'n4',
+    title: 'Mayer Daak',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2021',
+    description: 'A story about a mother\'s love and sacrifice.'
+  },
+  {
+    id: 'n5',
+    title: 'Taka',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2022',
+    description: 'A drama about the influence of money in relationships.'
+  },
+  {
+    id: 'n6',
+    title: 'Buker Modhye Agun',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2023',
+    description: 'A thrilling mystery drama.'
+  },
+  {
+    id: 'n7',
+    title: 'Networker Baire',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2021',
+    description: 'A story about friends and their unexpected journey.'
+  },
+  {
+    id: 'n8',
+    title: 'Syndicate',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2022',
+    description: 'A crime thriller about a powerful syndicate.'
+  },
+  {
+    id: 'n9',
+    title: 'Karagar',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2022',
+    description: 'A mystery thriller set in a prison.'
+  },
+  {
+    id: 'n10',
+    title: 'Mohanagar',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2021',
+    description: 'A gripping crime thriller set in Dhaka city.'
+  },
+  {
+    id: 'n11',
+    title: 'Kaiser',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2022',
+    description: 'A mystery thriller about a detective.'
+  },
+  {
+    id: 'n12',
+    title: 'Pett Kata Shaw',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2022',
+    description: 'A horror anthology series.'
+  },
+  {
+    id: 'n13',
+    title: 'Unoloukik',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2021',
+    description: 'A psychological thriller anthology.'
+  },
+  {
+    id: 'n14',
+    title: 'Ladies & Gentlemen',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2021',
+    description: 'A drama about gender issues in the workplace.'
+  },
+  {
+    id: 'n15',
+    title: 'Taqdeer',
+    posterUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2020',
+    description: 'A thriller about a freezer van driver.'
+  },
+  {
+    id: 'n16',
+    title: 'Contract',
+    posterUrl: 'https://images.unsplash.com/photo-1478720143022-10d0002856c3?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2021',
+    description: 'An action thriller about a hitman.'
+  },
+  {
+    id: 'n17',
+    title: 'Mainkar Chipay',
+    posterUrl: 'https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=2056&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2020',
+    description: 'A dark comedy thriller.'
+  },
+  {
+    id: 'n18',
+    title: 'August 14',
+    posterUrl: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2020',
+    description: 'A crime thriller based on true events.'
+  },
+  {
+    id: 'n19',
+    title: 'Morichika',
+    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2069&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2021',
+    description: 'A thriller about a model\'s murder.'
+  },
+  {
+    id: 'n20',
+    title: 'Sabrina',
+    posterUrl: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop',
+    videoUrl: 'https://www.youtube.com/embed/YoHD9XEInc0',
+    genre: 'Bangla Natok',
+    year: '2022',
+    description: 'A drama about two women named Sabrina.'
   }
 ];
 
@@ -127,12 +539,14 @@ const INITIAL_MOVIES: Movie[] = [
 export default function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [featuredMovieId, setFeaturedMovieId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [currentView, setCurrentView] = useState<'home' | 'admin' | 'player'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'admin' | 'player' | 'livetv'>('home');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [initialEditMovie, setInitialEditMovie] = useState<Movie | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmModal, setConfirmModal] = useState<{
@@ -172,27 +586,32 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [moviesRes, featuredRes, reportsRes, categoriesRes] = await Promise.all([
+        const [moviesRes, featuredRes, reportsRes, categoriesRes, channelsRes] = await Promise.all([
           fetch('/api/movies'),
           fetch('/api/config/featured'),
           fetch('/api/reports'),
-          fetch('/api/categories')
+          fetch('/api/categories'),
+          fetch('/api/channels')
         ]);
 
         const moviesList = await moviesRes.json();
         const featuredData = await featuredRes.json();
         const reportsList = await reportsRes.json();
         const categoriesList = await categoriesRes.json();
+        const channelsList = await channelsRes.json();
 
-        if (moviesList.length === 0 && isLoading) {
-          // Seed initial data if empty
+        if (moviesList.length < INITIAL_MOVIES.length && isLoading) {
+          // Seed initial data if missing some
+          const existingTitles = new Set(moviesList.map((m: any) => m.title));
           for (const movie of INITIAL_MOVIES) {
-            const { id, ...movieData } = movie;
-            await fetch('/api/movies', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(movieData)
-            });
+            if (!existingTitles.has(movie.title)) {
+              const { id, ...movieData } = movie;
+              await fetch('/api/movies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(movieData)
+              });
+            }
           }
           // Re-fetch after seeding
           const reFetchRes = await fetch('/api/movies');
@@ -201,9 +620,51 @@ export default function App() {
           setMovies(moviesList);
         }
 
+        // Seed initial channels if empty
+        if (channelsList.length === 0 && isLoading) {
+          const initialChannels = [
+            { name: 'Somoy TV', logoUrl: 'https://images.unsplash.com/photo-1585829365234-781fcd5013d9?q=80&w=200&h=200&auto=format&fit=crop', streamUrl: 'https://www.youtube.com/embed/YoHD9XEInc0', category: 'News' },
+            { name: 'Independent TV', logoUrl: 'https://images.unsplash.com/photo-1585829365234-781fcd5013d9?q=80&w=200&h=200&auto=format&fit=crop', streamUrl: 'https://www.youtube.com/embed/YoHD9XEInc0', category: 'News' },
+            { name: 'Channel i', logoUrl: 'https://images.unsplash.com/photo-1585829365234-781fcd5013d9?q=80&w=200&h=200&auto=format&fit=crop', streamUrl: 'https://www.youtube.com/embed/YoHD9XEInc0', category: 'Entertainment' },
+            { name: 'NTV', logoUrl: 'https://images.unsplash.com/photo-1585829365234-781fcd5013d9?q=80&w=200&h=200&auto=format&fit=crop', streamUrl: 'https://www.youtube.com/embed/YoHD9XEInc0', category: 'Entertainment' },
+          ];
+          for (const channel of initialChannels) {
+            await fetch('/api/channels', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(channel)
+            });
+          }
+          const reFetchChannels = await fetch('/api/channels');
+          setChannels(await reFetchChannels.json());
+        } else {
+          setChannels(channelsList);
+        }
+
         setFeaturedMovieId(featuredData.movieId);
         setReports(reportsList);
-        setCategories(categoriesList);
+        
+        // Seed categories if missing
+        const requiredCategories = ['Bangla Movie', 'Tamil Dubbed', 'Hindi Movie', 'Bangla Natok'];
+        const existingCategoryNames = new Set(categoriesList.map((c: any) => c.name));
+        for (const catName of requiredCategories) {
+          if (!existingCategoryNames.has(catName)) {
+            await fetch('/api/categories', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: catName })
+            });
+          }
+        }
+        
+        // Re-fetch categories if any were added
+        if (requiredCategories.some(cat => !existingCategoryNames.has(cat))) {
+          const reFetchCats = await fetch('/api/categories');
+          setCategories(await reFetchCats.json());
+        } else {
+          setCategories(categoriesList);
+        }
+
         setIsLoading(false);
         setDbError(null);
       } catch (error) {
@@ -456,6 +917,46 @@ export default function App() {
     }
   };
 
+  const handleAddChannel = async (channel: Omit<Channel, 'id'>) => {
+    try {
+      const res = await fetch('/api/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(channel)
+      });
+      const data = await res.json();
+      setChannels(prev => [...prev, data]);
+      setNotification({ isOpen: true, type: 'success', message: 'Channel added successfully' });
+    } catch (error) {
+      console.error('Failed to add channel:', error);
+    }
+  };
+
+  const handleUpdateChannel = async (id: string, channel: Omit<Channel, 'id'>) => {
+    try {
+      const res = await fetch(`/api/channels/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(channel)
+      });
+      const data = await res.json();
+      setChannels(prev => prev.map(c => c.id === id ? data : c));
+      setNotification({ isOpen: true, type: 'success', message: 'Channel updated successfully' });
+    } catch (error) {
+      console.error('Failed to update channel:', error);
+    }
+  };
+
+  const handleDeleteChannel = async (id: string) => {
+    try {
+      await fetch(`/api/channels/${id}`, { method: 'DELETE' });
+      setChannels(prev => prev.filter(c => c.id !== id));
+      setNotification({ isOpen: true, type: 'success', message: 'Channel deleted successfully' });
+    } catch (error) {
+      console.error('Failed to delete channel:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-white font-sans selection:bg-blue-600 selection:text-white">
       {/* Navbar */}
@@ -512,6 +1013,13 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setCurrentView('livetv')}
+            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95"
+          >
+            <Tv size={16} className="text-blue-500" />
+            Live TV
+          </button>
           <button 
             onClick={() => setCurrentView('admin')}
             className="hidden md:flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95"
@@ -610,6 +1118,13 @@ export default function App() {
                 onSelectCategory={setSelectedCategory}
               />
             )}
+            {currentView === 'livetv' && (
+              <LiveTVView 
+                channels={channels}
+                selectedChannel={selectedChannel}
+                onSelectChannel={setSelectedChannel}
+              />
+            )}
             {currentView === 'player' && selectedMovie && (
               <PlayerView 
                 movie={selectedMovie} 
@@ -659,6 +1174,10 @@ export default function App() {
                 onAddCategory={handleAddCategory}
                 onUpdateCategory={handleUpdateCategory}
                 onDeleteCategory={handleDeleteCategory}
+                channels={channels}
+                onAddChannel={handleAddChannel}
+                onUpdateChannel={handleUpdateChannel}
+                onDeleteChannel={handleDeleteChannel}
                 initialEditMovie={initialEditMovie}
                 onClearInitialEdit={() => setInitialEditMovie(null)}
                 onPlayMovie={handlePlayMovie}
@@ -1017,6 +1536,132 @@ function MovieCard({ movie, onClick }: { movie: Movie, onClick: () => void, key?
   );
 }
 
+function LiveTVView({ channels, selectedChannel, onSelectChannel }: { 
+  channels: Channel[], 
+  selectedChannel: Channel | null,
+  onSelectChannel: (c: Channel) => void
+}) {
+  const categories = useMemo(() => {
+    const cats = new Set(channels.map(c => c.category));
+    return ['All', ...Array.from(cats)];
+  }, [channels]);
+
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const filteredChannels = useMemo(() => {
+    if (selectedCategory === 'All') return channels;
+    return channels.filter(c => c.category === selectedCategory);
+  }, [channels, selectedCategory]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="px-4 md:px-8 space-y-8 pb-20"
+    >
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-black flex items-center gap-3">
+            <Tv className="text-blue-500" size={32} />
+            Live TV <span className="text-blue-500">Channels</span>
+          </h2>
+          <p className="text-gray-500 mt-1">Watch your favorite TV channels live in high quality.</p>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                selectedCategory === cat 
+                ? 'bg-blue-600 border-blue-500 text-white' 
+                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Player Section */}
+        <div className="lg:col-span-2 space-y-4">
+          {selectedChannel ? (
+            <div className="space-y-4">
+              <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-white/5 shadow-2xl relative group">
+                <iframe 
+                  src={selectedChannel.streamUrl}
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                  allow="autoplay; encrypted-media"
+                />
+                <div className="absolute top-4 left-4 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter animate-pulse">
+                  Live
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl">
+                <img src={selectedChannel.logoUrl} className="w-12 h-12 rounded-lg object-cover" alt="" referrerPolicy="no-referrer" />
+                <div>
+                  <h3 className="text-xl font-bold">{selectedChannel.name}</h3>
+                  <p className="text-sm text-blue-400 font-medium">{selectedChannel.category}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="aspect-video bg-white/5 rounded-2xl border border-dashed border-white/10 flex flex-col items-center justify-center text-center p-8 space-y-4">
+              <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500">
+                <Tv size={40} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Select a Channel</h3>
+                <p className="text-gray-500 max-w-xs mx-auto">Click on any channel from the list to start watching live stream.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Channel List Section */}
+        <div className="space-y-4">
+          <h3 className="font-bold text-gray-400 uppercase tracking-widest text-xs px-2">Channel List</h3>
+          <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            {filteredChannels.map(channel => (
+              <button
+                key={channel.id}
+                onClick={() => onSelectChannel(channel)}
+                className={`w-full flex items-center gap-4 p-3 rounded-xl border transition-all text-left group ${
+                  selectedChannel?.id === channel.id
+                  ? 'bg-blue-600/10 border-blue-500/50'
+                  : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
+                }`}
+              >
+                <div className="relative">
+                  <img src={channel.logoUrl} className="w-12 h-12 rounded-lg object-cover" alt="" referrerPolicy="no-referrer" />
+                  {selectedChannel?.id === channel.id && (
+                    <div className="absolute inset-0 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                      <Play size={16} fill="currentColor" className="text-blue-500" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className={`font-bold text-sm ${selectedChannel?.id === channel.id ? 'text-blue-400' : 'text-white'}`}>
+                    {channel.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-500">{channel.category}</p>
+                </div>
+                {selectedChannel?.id === channel.id && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function PlayerView({ movie, onBack, relatedMovies, onPlayRelated, onReport, isAdmin, onEdit, onDelete, onDownload }: { 
   movie: Movie, 
   onBack: () => void,
@@ -1263,6 +1908,10 @@ function AdminView({
   onAddCategory,
   onUpdateCategory,
   onDeleteCategory,
+  channels,
+  onAddChannel,
+  onUpdateChannel,
+  onDeleteChannel,
   initialEditMovie,
   onClearInitialEdit,
   onPlayMovie,
@@ -1285,6 +1934,10 @@ function AdminView({
   onAddCategory: (name: string) => void,
   onUpdateCategory: (id: string, name: string) => void,
   onDeleteCategory: (id: string) => void,
+  channels: Channel[],
+  onAddChannel: (c: Omit<Channel, 'id'>) => void,
+  onUpdateChannel: (id: string, c: Omit<Channel, 'id'>) => void,
+  onDeleteChannel: (id: string) => void,
   initialEditMovie?: Movie | null,
   onClearInitialEdit?: () => void,
   onPlayMovie: (m: Movie) => void,
@@ -1295,13 +1948,16 @@ function AdminView({
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
-  const [activeTab, setActiveTab] = useState<'movies' | 'categories' | 'bulk' | 'reports'>('movies');
+  const [activeTab, setActiveTab] = useState<'movies' | 'categories' | 'channels' | 'bulk' | 'reports'>('movies');
   const [bulkData, setBulkData] = useState('');
   const [bulkStatus, setBulkStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [movieSearch, setMovieSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+
+  const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
 
   useEffect(() => {
     if (initialEditMovie) {
@@ -1422,6 +2078,12 @@ function AdminView({
           className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'categories' ? 'border-blue-600 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
         >
           Categories
+        </button>
+        <button 
+          onClick={() => setActiveTab('channels')}
+          className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'channels' ? 'border-blue-600 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+        >
+          Channels
         </button>
         <button 
           onClick={() => setActiveTab('bulk')}
@@ -1641,6 +2303,104 @@ function AdminView({
         </div>
       )}
 
+      {activeTab === 'channels' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold">Manage Live TV Channels</h3>
+            <button 
+              onClick={() => {
+                setEditingChannel(null);
+                setIsChannelModalOpen(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all text-sm"
+            >
+              <Plus size={18} />
+              Add Channel
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {channels.map(channel => (
+              <div key={channel.id} className="bg-[#121214] border border-white/5 p-4 rounded-2xl flex items-center gap-4 group">
+                <img src={channel.logoUrl} className="w-16 h-16 rounded-xl object-cover" alt="" referrerPolicy="no-referrer" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold truncate">{channel.name}</h4>
+                  <p className="text-xs text-gray-500">{channel.category}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <button 
+                      onClick={() => {
+                        setEditingChannel(channel);
+                        setIsChannelModalOpen(true);
+                      }}
+                      className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-blue-400 transition-colors"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button 
+                      onClick={() => onConfirm('Delete Channel', `Are you sure you want to delete ${channel.name}?`, () => onDeleteChannel(channel.id))}
+                      className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-red-400 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {isChannelModalOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-[#121214] border border-white/10 rounded-3xl p-8 w-full max-w-lg shadow-2xl space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-black">{editingChannel ? 'Edit Channel' : 'Add Channel'}</h3>
+                  <button onClick={() => setIsChannelModalOpen(false)} className="text-gray-500 hover:text-white"><X size={24} /></button>
+                </div>
+
+                <form className="space-y-4" onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const channelData = {
+                    name: formData.get('name') as string,
+                    logoUrl: formData.get('logoUrl') as string,
+                    streamUrl: formData.get('streamUrl') as string,
+                    category: formData.get('category') as string,
+                  };
+                  if (editingChannel) {
+                    onUpdateChannel(editingChannel.id, channelData);
+                  } else {
+                    onAddChannel(channelData);
+                  }
+                  setIsChannelModalOpen(false);
+                }}>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Channel Name</label>
+                    <input name="name" defaultValue={editingChannel?.name} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Logo URL</label>
+                    <input name="logoUrl" defaultValue={editingChannel?.logoUrl} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Stream URL (YouTube Embed or M3U8)</label>
+                    <input name="streamUrl" defaultValue={editingChannel?.streamUrl} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</label>
+                    <input name="category" defaultValue={editingChannel?.category} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                  </div>
+                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition-all">
+                    {editingChannel ? 'Update Channel' : 'Add Channel'}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </div>
+      )}
       {activeTab === 'bulk' && (
         <div className="bg-[#121214] border border-white/5 rounded-3xl p-8 space-y-6 shadow-xl">
           <div className="space-y-2">

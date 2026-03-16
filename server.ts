@@ -42,6 +42,14 @@ db.exec(`
     name TEXT UNIQUE
   );
 
+  CREATE TABLE IF NOT EXISTS channels (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    logoUrl TEXT,
+    streamUrl TEXT,
+    category TEXT
+  );
+
   -- Migration: Add servers column if it doesn't exist
   BEGIN;
   SELECT CASE WHEN COUNT(*) = 0 THEN
@@ -165,6 +173,38 @@ async function setupApp() {
   app.delete("/api/categories/:id", (req, res) => {
     const { id } = req.params;
     db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+    res.json({ success: true });
+  });
+
+  // Channel Routes
+  app.get("/api/channels", (req, res) => {
+    try {
+      const channels = db.prepare("SELECT * FROM channels").all();
+      res.json(channels);
+    } catch (e) {
+      res.status(500).json({ error: "Database error" });
+    }
+  });
+
+  app.post("/api/channels", (req, res) => {
+    const { name, logoUrl, streamUrl, category } = req.body;
+    const id = Math.random().toString(36).substr(2, 9);
+    db.prepare("INSERT INTO channels (id, name, logoUrl, streamUrl, category) VALUES (?, ?, ?, ?, ?)")
+      .run(id, name, logoUrl, streamUrl, category);
+    res.json({ id, ...req.body });
+  });
+
+  app.put("/api/channels/:id", (req, res) => {
+    const { id } = req.params;
+    const { name, logoUrl, streamUrl, category } = req.body;
+    db.prepare("UPDATE channels SET name = ?, logoUrl = ?, streamUrl = ?, category = ? WHERE id = ?")
+      .run(name, logoUrl, streamUrl, category, id);
+    res.json({ id, ...req.body });
+  });
+
+  app.delete("/api/channels/:id", (req, res) => {
+    const { id } = req.params;
+    db.prepare("DELETE FROM channels WHERE id = ?").run(id);
     res.json({ success: true });
   });
 
