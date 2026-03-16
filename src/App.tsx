@@ -969,7 +969,7 @@ export default function App() {
             <Film className="text-white" size={24} />
           </div>
           <h1 className="text-xl md:text-2xl font-black tracking-tighter">
-            Footfy <span className="text-blue-500">Live</span>
+            AYAT <span className="text-blue-500">BD™</span>
           </h1>
         </div>
 
@@ -1104,7 +1104,7 @@ export default function App() {
         ) : isLoading ? (
           <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
             <Loader2 className="animate-spin text-blue-500" size={48} />
-            <p className="text-gray-500 font-medium">Loading Footfy Live Library...</p>
+            <p className="text-gray-500 font-medium">Loading AYAT BD™ Library...</p>
           </div>
         ) : (
           <>
@@ -1202,7 +1202,7 @@ export default function App() {
       <footer className="border-t border-white/5 mt-20 py-12 px-4 md:px-8 bg-black/40">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h2 className="text-xl font-bold italic">Footfy Live</h2>
+            <h2 className="text-xl font-bold italic">AYAT BD™</h2>
             <p className="text-gray-500 text-sm leading-relaxed">
               Premium movie streaming experience. Watch the latest blockbusters and series in high definition.
             </p>
@@ -1292,7 +1292,7 @@ export default function App() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-white/5 text-center text-gray-600 text-xs">
-          © 2026 Tamim Hasan Shaon. All rights reserved. Inspired By Footfy Live
+          © 2026 Tamim Hasan Shaon. All rights reserved. Inspired By AYAT BD™
         </div>
       </footer>
       <ConfirmModal 
@@ -1958,6 +1958,64 @@ function AdminView({
 
   const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [isChannelUploading, setIsChannelUploading] = useState(false);
+  const [channelFormData, setChannelFormData] = useState({
+    name: '',
+    logoUrl: '',
+    streamUrl: '',
+    category: ''
+  });
+
+  useEffect(() => {
+    if (editingChannel) {
+      setChannelFormData({
+        name: editingChannel.name,
+        logoUrl: editingChannel.logoUrl,
+        streamUrl: editingChannel.streamUrl,
+        category: editingChannel.category
+      });
+    } else {
+      setChannelFormData({
+        name: '',
+        logoUrl: '',
+        streamUrl: '',
+        category: ''
+      });
+    }
+  }, [editingChannel]);
+
+  const handleChannelImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+    if (!apiKey) {
+      onNotify('error', 'ImgBB API Key is missing. Please add VITE_IMGBB_API_KEY to your secrets.');
+      return;
+    }
+
+    setIsChannelUploading(true);
+    const body = new FormData();
+    body.append('image', file);
+
+    try {
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: 'POST',
+        body: body,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setChannelFormData(prev => ({ ...prev, logoUrl: data.data.url }));
+      } else {
+        throw new Error(data.error?.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      onNotify('error', 'Failed to upload image. Please try again.');
+    } finally {
+      setIsChannelUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (initialEditMovie) {
@@ -2016,7 +2074,7 @@ function AdminView({
             <Lock className="text-blue-500" size={32} />
           </div>
           <h2 className="text-2xl font-bold text-center mb-2">Admin Access</h2>
-          <p className="text-gray-500 text-center text-sm mb-8">Enter password to manage Footfy Live</p>
+          <p className="text-gray-500 text-center text-sm mb-8">Enter password to manage AYAT BD™</p>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <input 
@@ -2150,9 +2208,21 @@ function AdminView({
                   {filteredMovies.map(movie => (
                   <tr key={movie.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <img src={movie.posterUrl} className="w-10 h-14 rounded object-cover border border-white/10" referrerPolicy="no-referrer" />
-                        <span className="font-bold">{movie.title}</span>
+                      <div className="flex items-center gap-4 group/thumb relative">
+                        <div className="relative w-10 h-14 flex-shrink-0">
+                          <img src={movie.posterUrl} className="w-full h-full rounded object-cover border border-white/10" referrerPolicy="no-referrer" />
+                          <button 
+                            onClick={() => {
+                              setEditingMovie(movie);
+                              setIsModalOpen(true);
+                            }}
+                            className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center rounded"
+                            title="Change Thumbnail"
+                          >
+                            <Edit2 size={14} className="text-white" />
+                          </button>
+                        </div>
+                        <span className="font-bold truncate max-w-[200px]">{movie.title}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-400">{movie.genre}</td>
@@ -2321,8 +2391,20 @@ function AdminView({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {channels.map(channel => (
-              <div key={channel.id} className="bg-[#121214] border border-white/5 p-4 rounded-2xl flex items-center gap-4 group">
-                <img src={channel.logoUrl} className="w-16 h-16 rounded-xl object-cover" alt="" referrerPolicy="no-referrer" />
+              <div key={channel.id} className="bg-[#121214] border border-white/5 p-4 rounded-2xl flex items-center gap-4 group/channel">
+                <div className="relative w-16 h-16 flex-shrink-0">
+                  <img src={channel.logoUrl} className="w-full h-full rounded-xl object-cover border border-white/10" alt="" referrerPolicy="no-referrer" />
+                  <button 
+                    onClick={() => {
+                      setEditingChannel(channel);
+                      setIsChannelModalOpen(true);
+                    }}
+                    className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover/channel:opacity-100 transition-opacity flex items-center justify-center rounded-xl"
+                    title="Change Logo"
+                  >
+                    <Edit2 size={18} className="text-white" />
+                  </button>
+                </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold truncate">{channel.name}</h4>
                   <p className="text-xs text-gray-500">{channel.category}</p>
@@ -2362,35 +2444,65 @@ function AdminView({
 
                 <form className="space-y-4" onSubmit={(e) => {
                   e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const channelData = {
-                    name: formData.get('name') as string,
-                    logoUrl: formData.get('logoUrl') as string,
-                    streamUrl: formData.get('streamUrl') as string,
-                    category: formData.get('category') as string,
-                  };
                   if (editingChannel) {
-                    onUpdateChannel(editingChannel.id, channelData);
+                    onUpdateChannel(editingChannel.id, channelFormData);
                   } else {
-                    onAddChannel(channelData);
+                    onAddChannel(channelFormData);
                   }
                   setIsChannelModalOpen(false);
                 }}>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Channel Name</label>
-                    <input name="name" defaultValue={editingChannel?.name} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                    <input 
+                      value={channelFormData.name}
+                      onChange={e => setChannelFormData({...channelFormData, name: e.target.value})}
+                      required 
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Logo URL</label>
-                    <input name="logoUrl" defaultValue={editingChannel?.logoUrl} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Logo URL / Upload</label>
+                    <div className="flex gap-4">
+                      {channelFormData.logoUrl && (
+                        <div className="w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                          <img src={channelFormData.logoUrl} className="w-full h-full object-cover" alt="Preview" referrerPolicy="no-referrer" />
+                        </div>
+                      )}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex gap-2">
+                          <input 
+                            value={channelFormData.logoUrl}
+                            onChange={e => setChannelFormData({...channelFormData, logoUrl: e.target.value})}
+                            required 
+                            placeholder="https://..."
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50 text-sm" 
+                          />
+                          <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 p-3 rounded-xl transition-all flex items-center justify-center min-w-[48px]">
+                            {isChannelUploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+                            <input type="file" className="hidden" accept="image/*" onChange={handleChannelImageUpload} disabled={isChannelUploading} />
+                          </label>
+                        </div>
+                        <p className="text-[10px] text-gray-500 italic">Paste a URL or upload an image</p>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Stream URL (YouTube Embed or M3U8)</label>
-                    <input name="streamUrl" defaultValue={editingChannel?.streamUrl} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                    <input 
+                      value={channelFormData.streamUrl}
+                      onChange={e => setChannelFormData({...channelFormData, streamUrl: e.target.value})}
+                      required 
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</label>
-                    <input name="category" defaultValue={editingChannel?.category} required className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" />
+                    <input 
+                      value={channelFormData.category}
+                      onChange={e => setChannelFormData({...channelFormData, category: e.target.value})}
+                      required 
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500/50" 
+                    />
                   </div>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition-all">
                     {editingChannel ? 'Update Channel' : 'Add Channel'}
@@ -2689,17 +2801,27 @@ function MovieModal({ movie, categories, onClose, onSave, onNotify }: {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Poster URL / Upload</label>
-              <div className="flex gap-2">
-                <input 
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500"
-                  value={formData.posterUrl}
-                  onChange={e => setFormData({...formData, posterUrl: e.target.value})}
-                  placeholder="https://..."
-                />
-                <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 p-3 rounded-xl transition-all flex items-center justify-center min-w-[48px]">
-                  {isUploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
-                </label>
+              <div className="flex gap-4">
+                {formData.posterUrl && (
+                  <div className="w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10 bg-white/5">
+                    <img src={formData.posterUrl} className="w-full h-full object-cover" alt="Preview" referrerPolicy="no-referrer" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <input 
+                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 text-sm"
+                      value={formData.posterUrl}
+                      onChange={e => setFormData({...formData, posterUrl: e.target.value})}
+                      placeholder="https://..."
+                    />
+                    <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 p-3 rounded-xl transition-all flex items-center justify-center min-w-[48px]">
+                      {isUploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic">Paste a URL or upload an image (via ImgBB)</p>
+                </div>
               </div>
             </div>
             <div>
